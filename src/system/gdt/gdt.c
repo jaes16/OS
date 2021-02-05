@@ -1,8 +1,6 @@
 #include <system.h>
 
-/* Defines a GDT entry. We say packed, because it prevents the
-*  compiler from doing things that it thinks is best: Prevent
-*  compiler optimization by packing */
+// Defines a GDT entry. prevent compiler optimization by packing
 struct gdt_entry
 {
   unsigned short limit_low;
@@ -57,7 +55,7 @@ void gdt_install(void)
   gp.limit = (sizeof(struct gdt_entry) * 3) - 1;
   gp.base = (unsigned int) &gdt;
 
-  /* Our NULL descriptor */
+  // gdt has to have one null descriptor.
   gdt_set_gate(0, 0, 0, 0, 0);
 
   /* The second entry is our Code Segment. The base address

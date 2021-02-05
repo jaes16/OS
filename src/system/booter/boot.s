@@ -19,10 +19,11 @@
 
 _start:
 
-  # enable paging so that we can load kernel into virtual address of 3gb
+  # enable paging so that we can run the kernel in the virtual address of 3gb
   call _enable_paging
 
-  ljmp $0x8, $0xc000001d
+  # long jump so that we jmp into higher half kernel. 0x8 is for the descriptor for the code seg
+  ljmp $0x8, $call_kernel
 
 call_kernel:
   # Transfer control to the main kernel.
@@ -48,5 +49,5 @@ halting:
 .section .bss
 .align 16
 stack_bottom:
-.skip 16384 # 16 KiB
+.skip 0x8000 # 32 KiB
 stack_top:

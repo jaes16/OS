@@ -1,6 +1,8 @@
 #include <system.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <stdarg.h>
+#include <null.h>
 #include <multiboot.h>
 #include <mmngr_virtual.h>
 
@@ -96,7 +98,7 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
   isrs_install();
   timer_install();
   keyboard_install();
-
+  init_video();
 
   // then start interrupts so those installs above have an effect
   __asm__ __volatile__ ("sti");
@@ -124,7 +126,7 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
 
   vmmngr_initialize();
 
-  init_video();
+  //init_video();
 
   char num[32];
   num[0] = 'H';
@@ -139,93 +141,14 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
   num[9] = 'l';
   num[10] = 'd';
   num[11] = '!';
-  num[12] = 0;
+  num[12] = '\n';
+  num[13] = 0;
   puts(num);
-  //puts("Hello World!");
+  char num2[32] = {'H', 'W', '!', '\n', 0};
+  puts(num2);
 
-  /*
-  char num[32];
-  puts("PMM initialized with ");
-  itoa(phys_mem_size, 10, num);
-  puts(num);
-  puts("KB of physical memory.\n\nPhysical Memory Map:\n");
-
-  int i = 0;
-  int phys_mem_size_2 = 0;
-  while(m_region[i].size > 0){
-    memset(num, 0, 32);
-    puts((char *) "Region ");
-    putc((char) (i+48));
-    puts((char *) ": start: 0x");
-    itoa(m_region[i].addr, 16, num);
-    puts(num);
-    puts((char *) " length (bytes): 0x");
-    memset(num, 0, 32);
-    itoa(m_region[i].len, 16, num);
-    puts(num);
-    puts((char *) " type: ");
-    puts((char *) (m_region[i].type + 48));
-    switch(m_region[i].type){
-      case(1):
-        puts((char *) " (Available)\n");
-        phys_mem_size_2 += m_region[i].len;
-        break;
-      case(2):
-        puts((char *) " (Reserved)\n");
-        break;
-      case(3):
-        puts((char *) " (ACPI Reclaimable)\n");
-        break;
-      case(4):
-        puts((char *) " (NVS)\n");
-        break;
-      case(5):
-        puts((char *) " (BADRAM)\n");
-        break;
-    }
-    i++;
-  }
-
-  puts("\nCalculated memory size: ");
-  memset(num, 0, 32);
-  itoa(phys_mem_size_2, 16, num);
-  puts(num);
-
-
-  puts("\nMemory size: ");
-  memset(num, 0, 32);
-  itoa(pmmngr_get_memory_size(), 16, num);
-  puts(num);
-
-  puts("\nBlock count: ");
-  memset(num, 0, 32);
-  itoa(pmmngr_get_block_count(), 16, num);
-  puts(num);
-
-  puts("\nFree block count: ");
-  memset(num, 0, 32);
-  itoa(pmmngr_get_free_block_count(), 16, num);
-  puts(num);
-
-  puts("\nFreeing block at: 0xFE00000");
-  pmmngr_free_block((void *) 0xfe00000);
-
-  puts("\nFree block count: ");
-  memset(num, 0, 32);
-  itoa(pmmngr_get_free_block_count(), 16, num);
-  puts(num);
-
-  puts("\nAllocating block at: ");
-  memset(num, 0, 32);
-  itoa((int) pmmngr_alloc_block(), 16, num);
-  puts(num);
-
-  puts("\nFree Block count: ");
-  memset(num, 0, 32);
-  itoa(pmmngr_get_free_block_count(), 16, num);
-  puts(num);
-  */
-
+  char *pagefaulting = 0xe0000000;
+  pagefaulting[0] = 'i';
 
   for (;;);
 }

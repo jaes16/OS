@@ -236,14 +236,13 @@ isr_common_stub:
     push %es
     push %fs
     push %gs
-    mov $0xcafedcaf, %eax
     xor %eax, %eax
-    mov $0x10, %ax   # Load the Kernel Data Segment descriptor!
+    mov $0x10, %ax   # 16 = kernel data segment descriptor (after empty and code segment descript.)
     mov %ax, %ds
     mov %ax, %es
     mov %ax, %fs
     mov %ax, %gs
-    mov %sp, %ax   # Push us the stack
+    mov %esp, %eax   # Push us the stack. make sure we're moving the whole register. else 0xc0001000 might become 0x1000
     push %eax
     call fault_handler
     # mov fault_handler, %eax

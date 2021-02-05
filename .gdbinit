@@ -14,9 +14,9 @@ set architecture i386:intel
 # connect to qemu port
 target remote localhost:26000
 
-b _start
+#b *0x10000c
 b _main
-
+b irq_handler
 c
 
 layout split
