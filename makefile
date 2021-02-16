@@ -4,7 +4,7 @@ BUILD_DIR=./build
 
 
 BUILD_LIST=$(shell ./src/mk.sh $(PWD)/src src)
-
+BUILD_LIST:=$(BUILD_LIST) mobydick.c
 
 CC = i686-elf-gcc
 AS = i686-elf-as

@@ -16,6 +16,8 @@ extern unsigned short *memsetw(void *dest, unsigned short val, size_t count);
 extern int strlen(const char *str);
 extern unsigned char inportb (unsigned short _port);
 extern void outportb (unsigned short _port, unsigned char _data);
+extern unsigned short inportw (unsigned short _port);
+extern void outportw (unsigned short _port, unsigned short _data);
 
 /* SCRN.C */
 extern void scroll(void);
@@ -62,5 +64,8 @@ extern void timer_install(void);
 /* KB.C */
 extern void keyboard_handler(struct regs *r);
 extern void keyboard_install(void);
+
+extern void iconic_text(char *res, size_t size);
+
 
 #endif

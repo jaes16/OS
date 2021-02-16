@@ -2,9 +2,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdarg.h>
-#include <null.h>
 #include <multiboot.h>
 #include <mmngr_virtual.h>
+#include <ata.h>
 
 
 // for reading in the memory regions given to us by GRUB
@@ -76,6 +76,20 @@ void outportb (unsigned short _port, unsigned char _data)
     __asm__ __volatile__ ("outb %1, %0" : : "dN" (_port), "a" (_data));
 }
 
+// inline assembly for reading from port
+unsigned short inportw (unsigned short _port)
+{
+    unsigned short rv;
+    __asm__ __volatile__ ("inw %1, %0" : "=a" (rv) : "dN" (_port));
+    return rv;
+}
+
+// inline assembly for writing out to port
+void outportw (unsigned short _port, unsigned short _data)
+{
+    __asm__ __volatile__ ("outw %1, %0" : : "dN" (_port), "a" (_data));
+}
+
 
 
 /*/////////////////////////////////////////////////////////////////////////////
@@ -100,9 +114,8 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
   keyboard_install();
   init_video();
 
+  puts("Before c paging.\n");
   // then start interrupts so those installs above have an effect
-  __asm__ __volatile__ ("sti");
-
 
   // start reading multiboot info to get memory size and locations
   struct multiboot_mmap_entry *m_region = (struct multiboot_mmap_entry *) mbd->mmap_addr;
@@ -126,29 +139,55 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
 
   vmmngr_initialize();
 
-  //init_video();
+  char sector_0[512];
+  memsetw(sector_0, 0, 256);
 
-  char num[32];
-  num[0] = 'H';
-  num[1] = 'e';
-  num[2] = 'l';
-  num[3] = 'l';
-  num[4] = 'o';
-  num[5] = ' ';
-  num[6] = 'W';
-  num[7] = 'o';
-  num[8] = 'r';
-  num[9] = 'l';
-  num[10] = 'd';
-  num[11] = '!';
-  num[12] = '\n';
-  num[13] = 0;
-  puts(num);
-  char num2[32] = {'H', 'W', '!', '\n', 0};
-  puts(num2);
+  puts("Identifying drives : master\n\n");
+  ATA_PIO_identify(0);
+  puts("Identifying drives : slave\n\n");
+  ATA_PIO_identify(0);
 
-  char *pagefaulting = 0xe0000000;
-  pagefaulting[0] = 'i';
+  puts("Preparing to read and write sectors\n\n");
+
+  ATA_PIO_read_sectors(sector_0, 0, 1);
+  puts("Read sector:\n");
+  for(int i = 0; i < 512; i++){
+    if (sector_0[i] != 0) putc(sector_0[i]);
+  }
+  puts("\n\n");
+
+  memset(sector_0, 65, 512);
+  puts("Writing out this:");
+  //puts(sector_0);
+  puts("\n\n");
+
+  ATA_PIO_write_sectors(sector_0, 0, 1);
+  puts("Wrote sector\n\n");
+
+
+  puts("Preparing to read sector\n");
+  ATA_PIO_read_sectors(sector_0, 0, 1);
+  puts("Read in: \n");
+  for(int i = 0; i < 512; i++) {
+    if (sector_0[i] != 0) putc(sector_0[i]);
+  }
+  putc('\n');
+
+  memset(sector_0, 0, 512);
+  ATA_PIO_write_sectors(sector_0, 0, 1);
+
+  iconic_text(sector_0, 512);
+  ATA_PIO_write_sectors(sector_0, 0, 1);
+  puts("Wrote sector\n\n");
+
+  memset(sector_0, '!', 512);
+  puts(sector_0);
+
+  puts("Preparing to read sector\n");
+  ATA_PIO_read_sectors(sector_0, 0, 1);
+  puts(sector_0);
+
+__asm__ __volatile__ ("sti");
 
   for (;;);
 }

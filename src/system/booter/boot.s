@@ -16,14 +16,16 @@
 .section .text
 .global _start
 .type _start, @function
+.set OFFSET, call_kernel
+.set CALL_KERNEL_ADDR, OFFSET+0xbff00000
 
 _start:
 
   # enable paging so that we can run the kernel in the virtual address of 3gb
   call _enable_paging
 
-  # long jump so that we jmp into higher half kernel. 0x8 is for the descriptor for the code seg
-  ljmp $0x8, $call_kernel
+  # long jump so that we jmp into higher half kernel. 0x8 is for the descriptor for the code seg]
+  ljmp $0x8, $CALL_KERNEL_ADDR
 
 call_kernel:
   # Transfer control to the main kernel.

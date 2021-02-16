@@ -4,8 +4,8 @@
 
 /* These are own ISRs that point to our special IRQ handler
 *  instead of the regular 'fault_handler' function */
-extern void irq0();
-extern void irq1();
+extern void irq0(); // timer
+extern void irq1(); // keyboard
 extern void irq2();
 extern void irq3();
 extern void irq4();

@@ -1,4 +1,35 @@
+
 OUTPUT_FORMAT("elf32-i386")
+OUTPUT_ARCH(i386:i386)
+
+ENTRY(_start)
+SECTIONS
+{
+  phys = 1M;
+  . = phys;
+  .text BLOCK(4K) : ALIGN(4K) {
+    *(.multiboot)
+    *(.text)
+  }
+  .rodata BLOCK(4K) : ALIGN(4K) {
+    *(.rodata.*)
+  }
+  .data BLOCK(4K) : ALIGN(4K) {
+    *(.data)
+  }
+  .bss BLOCK(4K) : ALIGN(4K) {
+    *(COMMON)
+    *(.bss)
+  }
+
+  phys_end = .;
+}
+
+/*
+
+OUTPUT_FORMAT("elf32-i386")
+OUTPUT_ARCH(i386:i386)
+
 ENTRY(_start)
 SECTIONS
 {
@@ -28,3 +59,4 @@ SECTIONS
   phys_end = phys + (. - virt);
   virt_end = .;
 }
+*/
