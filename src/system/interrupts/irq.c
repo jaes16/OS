@@ -1,4 +1,5 @@
 #include <system.h>
+#include <libc/string.h>
 
 // Interrupt requests
 
@@ -122,4 +123,19 @@ void irq_handler(struct regs *r)
   /* In either case, we need to send an EOI to the master
   *  interrupt controller too */
   outportb(0x20, 0x20);
+}
+
+void interrupt_done(unsigned int n)
+{
+
+	//! insure its a valid hardware irq
+	if (n > 16)
+		return;
+
+	//! test if we need to send end-of-interrupt to second pic
+	if (n >= 8)
+		outportb(0xA0, 0x20);
+
+	//! always send end-of-interrupt to primary pic
+	outportb(0x20, 0x20);
 }

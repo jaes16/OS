@@ -2,6 +2,7 @@
 #include <mmngr_phys.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <libc/string.h>
 
 
 

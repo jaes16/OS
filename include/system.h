@@ -3,17 +3,12 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
+#include <stdarg.h>
 
 
 
 
 /* MAIN.C */
-extern void *memcpy(void *dest, const void *src, size_t count);
-extern void *memset(void *dest, char val, size_t count);
-extern void *memcpyw(void *dest, const void *src, size_t count);
-extern unsigned short *memsetw(void *dest, unsigned short val, size_t count);
-extern int strlen(const char *str);
 extern unsigned char inportb (unsigned short _port);
 extern void outportb (unsigned short _port, unsigned char _data);
 extern unsigned short inportw (unsigned short _port);
@@ -22,10 +17,11 @@ extern void outportw (unsigned short _port, unsigned short _data);
 /* SCRN.C */
 extern void scroll(void);
 extern void itoa(unsigned i,unsigned base,char* buf);
+extern int VGA_crsr_pos(void);
+extern void VGA_backspace(void);
 extern void putc(char c);
 extern void puts(char *str);
 extern int DebugPrintf (const char* str, ...);
-extern void settextcolor(unsigned char forecolor, unsigned char backcolor);
 extern void init_video(void);
 
 /* GDT.C */
@@ -55,6 +51,8 @@ extern void irq_remap(void);
 extern void irq_install(void);
 extern void irq_handler(struct regs *r);
 
+extern void interrupt_done(unsigned int n);
+
 /* TIMER.C */
 extern int timer_ticks;
 extern void timer_phase(int hz);
@@ -64,8 +62,6 @@ extern void timer_install(void);
 /* KB.C */
 extern void keyboard_handler(struct regs *r);
 extern void keyboard_install(void);
-
-extern void iconic_text(char *res, size_t size);
-
+extern char getChar(void);
 
 #endif

@@ -25,7 +25,7 @@ _start:
   call _enable_paging
 
   # long jump so that we jmp into higher half kernel. 0x8 is for the descriptor for the code seg]
-  ljmp $0x8, $CALL_KERNEL_ADDR
+  ljmp $0x8, $call_kernel
 
 call_kernel:
   # Transfer control to the main kernel.

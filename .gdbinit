@@ -16,9 +16,8 @@ target remote localhost:26000
 
 b *0x10000c
 b _main
-b irq_handler
-b idt_load
-b ATA_PIO_read_sectors
+b keyboard_handler
+b fault_handler
 c
 
 layout split

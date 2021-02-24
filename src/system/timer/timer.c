@@ -30,7 +30,7 @@ void timer_handler(struct regs *r)
   {
     puts((unsigned char *) "Ten seconds has passed\n");
   }
-*/
+  */
 }
 
 /* This will continuously loop until the given time has

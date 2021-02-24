@@ -1,5 +1,18 @@
 #include <system.h>
 
+#include <stdint.h>
+#include <stddef.h>
+#include <stdarg.h>
+
+#include <libc/string.h>
+#include <libc/stdio.h>
+
+
+#define VGA_ATTRIBUTE  0xf
+#define VGA_BLANK ((VGA_ATTRIBUTE << 8) | 0)
+
+short *VGA_text_buf = 0xB8000;
+
 /* KBDUS means US Keyboard Layout. This is a scancode table
 *  used to layout a standard US keyboard. I have left some
 *  comments in to give you an idea of what key is what, even
@@ -45,28 +58,72 @@ unsigned char kbdus[128] =
     0,	/* All other keys are undefined */
 };
 
+volatile int kb_receiving_input = 1;
+char kb_command[80];
+volatile char cur_char;
 
 /* Handles the keyboard interrupt */
 void keyboard_handler(struct regs *r)
 {
-  unsigned char scancode;
+  if(kb_receiving_input == 0) return;
 
-  /* Read from the keyboard's data buffer */
-  scancode = inportb(0x60);
+  if(inportb(0x64) & 1){
+    unsigned char scancode;
 
-  /* If the top bit of the byte we read from the keyboard is
-  *  set, that means that a key has just been released */
-  if (scancode & 0x80)
-  {
-    /* You can use this one to see if the user released the
-    *  shift, alt, or control keys... */
+    /* Read from the keyboard's data buffer */
+    scancode = inportb(0x60);
+    /* If the top bit of the byte we read from the keyboard is
+    *  set, that means that a key has just been released */
+    if (scancode & 0x80)
+    {
+      /* You can use this one to see if the user released the
+      *  shift, alt, or control keys... */
+    }
+    else
+    {
+      // put character that has been pressed
+      if(kbdus[scancode] != 0){
+        switch(kbdus[scancode]){
+
+          case('\b'):{
+            VGA_backspace();
+            cur_char = '\b';
+
+            break;
+          }
+
+          case('\n'):{
+            putc('\n');
+            cur_char = '\n';
+            break;
+          }
+
+          default:
+            if((VGA_crsr_pos() % 80) < 79){
+              putc(kbdus[scancode]);
+              cur_char = kbdus[scancode];
+
+            }
+            break;
+        }
+      }
+    }
   }
-  else
-  {
-    // put character that has been pressed
-    if(kbdus[scancode] != 0) putc(kbdus[scancode]);
-  }
+  interrupt_done(0);
+
+  kb_receiving_input = 0;
+  return;
 }
+
+char getChar(void)
+{
+  kb_receiving_input = 1;
+  while(kb_receiving_input == 1);
+  char ret_val = cur_char;
+  cur_char = 0;
+  return ret_val;
+}
+
 
 void keyboard_install(void)
 {

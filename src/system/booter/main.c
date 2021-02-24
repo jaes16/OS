@@ -1,66 +1,18 @@
 #include <system.h>
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdarg.h>
+
+#include <libc/string.h>
+#include <libc/stdio.h>
+
 #include <multiboot.h>
+
 #include <mmngr_virtual.h>
+
 #include <ata.h>
 
-
-// for reading in the memory regions given to us by GRUB
-typedef struct memory_region {
-  unsigned long base_addr;
-  unsigned long length;
-  unsigned int type;
-  unsigned int reserved;
-} memory_region;
-
-// copies count bytes of src to dest, but if range src:src+count is within dest:dest+count, src may change before written
-void *memcpy(void* dest, const void *src, size_t count)
-{
-  for(size_t i = 0; i < count; i++){
-    ((char *)dest)[i] = ((char *)src)[i];
-  }
-  return dest;
-}
-
-// sets count bytes of dest to the value in val
-void *memset(void* dest, char val, size_t count)
-{
-  for(size_t i = 0; i < count; i++){
-    ((char *)dest)[i] = val;
-  }
-  return dest;
-}
-
-// copies count bytes of src to dest, but if range src:src+count is within dest:dest+count, src may change before written
-void *memcpyw(void* dest, const void *src, size_t count)
-{
-  unsigned short temp[count];
-  for(size_t i = 0; i < count; i++){
-    temp[i] = ((unsigned short *)src)[i];
-  }
-  for(size_t i = 0; i < count; i++){
-    ((unsigned short *)dest)[i] = temp[i];
-  }
-  return dest;
-}
-
-// sets count shortbytes of dest to the value in val
-unsigned short *memsetw(void *dest, unsigned short val, size_t count)
-{
-  for(size_t i = 0; i < count; i++){
-    ((unsigned short *)dest)[i] = val;
-  }
-  return dest;
-}
-
-int strlen(const char *str)
-{
-  int i = 0;
-  while(str[i] != 0) i++;
-  return i;
-}
 
 // inline assembly for reading from port
 unsigned char inportb (unsigned short _port)
@@ -92,6 +44,58 @@ void outportw (unsigned short _port, unsigned short _data)
 
 
 
+int start_input(void)
+{
+  char buf[80];
+
+  memset(buf, 0, 80);
+  int index = 0;
+
+  int ret_val = 1;
+
+  puts("\n>");
+  int looper = 1;
+  while(looper == 1){
+
+    char c = getChar();
+
+    if(c == '\b'){
+      if(index > 0){
+        index--;
+        buf[index] = 0;
+      }
+    }
+    else if(c == '\n'){
+      char temp[80];
+      memset(temp, 0, 80);
+      int j = 0;
+      for(int i = 0; i < 80; i++){
+        if (buf[i] != 0) temp[j++] = buf[i];
+      }
+      if(terminal_command(temp) == 0) ret_val = 0;
+      looper = 0;
+    }
+    else if((index < 79) && (c != 0)){
+      buf[index] = c;
+      index++;
+    }
+  }
+  return ret_val;
+}
+
+
+int terminal_command(char *command)
+{
+  if(strcmp(command, "echo") == 0) printf("\nEcho is a figure from Greek mythology.\n");
+  else if(strcmp(command, "quit") == 0){
+    printf("\nQuitting...\n");
+    return 0;
+  }
+  else printf("Command not recognized: %s", command);
+  return 1;
+}
+
+
 /*/////////////////////////////////////////////////////////////////////////////
 /////////////////// MAIN FUNCTION: STARTS HERE ////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////*/
@@ -105,6 +109,8 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
     for(;;);
   }
 
+
+
   // initialize VGA; gdt; idt, irq, isrs; timer; keyboard input
   gdt_install();
   idt_install();
@@ -114,7 +120,11 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
   keyboard_install();
   init_video();
 
-  puts("Before c paging.\n");
+
+  printf("Kernel initiated, kernel size: %x, kernel start address: %x, kernel end address: %x.\n\n",
+              kernel_end_addr - kernel_start, kernel_start, kernel_end_addr);
+
+
   // then start interrupts so those installs above have an effect
 
   // start reading multiboot info to get memory size and locations
@@ -126,68 +136,29 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
   //pmmngr_init_region(0xB8000, 4000); // VGA location
   //char *b = pmmngr_alloc_block();
 
+  printf("Memory size is %x KB: Memory map returned by GRUB multiboot info:\n", phys_mem_size);
   // free those regions that grub said are free
   for(int i = 0; m_region[i].size > 0; i++){
+    printf("Region %d: Address: %x, Length: %x, Type: %d.\n",
+                i, (uint32_t) m_region[i].addr, (uint32_t) m_region[i].len, m_region[i].type);
     if(m_region[i].type == 1){
       pmmngr_init_region(m_region[i].addr, m_region[i].len);
     }
   }
+  putc('\n');
 
   // set as used: memorymap used for physical_memory manager; kernel space;
   pmmngr_deinit_region(kernel_start, kernel_end_addr-kernel_start); // deep space, outer space, inner space, kernel space. I'm no astrophysicist
   pmmngr_deinit_region(kernel_end_addr, (phys_mem_size/PMMNGR_BLOCK_SIZE)/PMMNGR_BLOCKS_PER_BYTE); // space for physical memory manager
 
+
   vmmngr_initialize();
+  ATA_PIO_init();
 
-  char sector_0[512];
-  memsetw(sector_0, 0, 256);
-
-  puts("Identifying drives : master\n\n");
-  ATA_PIO_identify(0);
-  puts("Identifying drives : slave\n\n");
-  ATA_PIO_identify(0);
-
-  puts("Preparing to read and write sectors\n\n");
-
-  ATA_PIO_read_sectors(sector_0, 0, 1);
-  puts("Read sector:\n");
-  for(int i = 0; i < 512; i++){
-    if (sector_0[i] != 0) putc(sector_0[i]);
+  volatile int main_looper = 1;
+  while(main_looper){
+    if(start_input() == 0) main_looper = 0;
   }
-  puts("\n\n");
-
-  memset(sector_0, 65, 512);
-  puts("Writing out this:");
-  //puts(sector_0);
-  puts("\n\n");
-
-  ATA_PIO_write_sectors(sector_0, 0, 1);
-  puts("Wrote sector\n\n");
-
-
-  puts("Preparing to read sector\n");
-  ATA_PIO_read_sectors(sector_0, 0, 1);
-  puts("Read in: \n");
-  for(int i = 0; i < 512; i++) {
-    if (sector_0[i] != 0) putc(sector_0[i]);
-  }
-  putc('\n');
-
-  memset(sector_0, 0, 512);
-  ATA_PIO_write_sectors(sector_0, 0, 1);
-
-  iconic_text(sector_0, 512);
-  ATA_PIO_write_sectors(sector_0, 0, 1);
-  puts("Wrote sector\n\n");
-
-  memset(sector_0, '!', 512);
-  puts(sector_0);
-
-  puts("Preparing to read sector\n");
-  ATA_PIO_read_sectors(sector_0, 0, 1);
-  puts(sector_0);
-
-__asm__ __volatile__ ("sti");
 
   for (;;);
 }

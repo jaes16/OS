@@ -1,5 +1,11 @@
 #include <system.h>
+
+#include <stdint.h>
+#include <stddef.h>
 #include <stdarg.h>
+
+#include <libc/string.h>
+#include <libc/stdio.h>
 
 #define VGA_BUF_LOC 0xB8000
 #define VGA_SIZE 2000
@@ -7,14 +13,12 @@
 #define VGA_X_SIZE 80
 #define VGA_ENTRY_SIZE 2 // 2 bytes
 
-#define TAB_SIZE
+#define VGA_ATTRIBUTE  0xf
+#define VGA_BLANK ((VGA_ATTRIBUTE << 8) | 0)
 
 unsigned short *text_buf;
 unsigned short temp_buf[VGA_Y_SIZE*VGA_X_SIZE];
-unsigned char attribute = 0xf;
 unsigned char cursor_x = 0, cursor_y = 0;
-unsigned short zero;
-unsigned short nl;
 
 /* Scrolls the screen one line*/
 void scroll(void)
@@ -23,22 +27,31 @@ void scroll(void)
   memcpyw(text_buf, &text_buf[VGA_X_SIZE], (VGA_Y_SIZE - 1) * VGA_X_SIZE);
 
   // erase last line
-  memsetw(&text_buf[(VGA_Y_SIZE - 1) * VGA_X_SIZE], zero, VGA_X_SIZE);
+  memsetw(&text_buf[(VGA_Y_SIZE - 1) * VGA_X_SIZE], VGA_BLANK, VGA_X_SIZE);
 
   // reset cursor
   cursor_y = VGA_Y_SIZE - 1;
 }
 
-int crsr_pos(void)
+int VGA_crsr_pos(void)
 {
   return (cursor_y * VGA_X_SIZE) + cursor_x;
+}
+
+void VGA_backspace(void) // explicitly for terminal commands
+{
+  if(cursor_x > 1){
+    cursor_x--;
+    text_buf[VGA_crsr_pos()] = VGA_BLANK;
+    move_crsr();
+  }
 }
 
 
 // clears screen and moves cursor
 void cls()
 {
-  memsetw(text_buf, zero, VGA_X_SIZE * VGA_Y_SIZE);
+  memsetw(text_buf, VGA_BLANK, VGA_X_SIZE * VGA_Y_SIZE);
 }
 
 
@@ -47,7 +60,7 @@ void move_crsr(void)
 {
   /*
   // if cursor is at an invalid (value 0) entry, move to leftmost invalid entry
-  while((text_buf[crsr_pos()] == zero) && (text_buf[crsr_pos()-1] == zero)){
+  while((text_buf[VGA_crsr_pos()] == VGA_BLANK) && (text_buf[VGA_crsr_pos()-1] == VGA_BLANK)){
     if(cursor_x > 0) cursor_x--;
     else if(cursor_y > 0){
       cursor_y--;
@@ -57,7 +70,7 @@ void move_crsr(void)
   */
 
   // index of cursor
-  unsigned crsr_position = crsr_pos();
+  unsigned crsr_position = VGA_crsr_pos();
 
   /* This sends a command to indicies 14 and 15 in the
   *  CRT Control Register of the VGA controller. These
@@ -69,28 +82,34 @@ void move_crsr(void)
   outportb(0x3D5, crsr_position);
 }
 
-void itoa(unsigned i,unsigned base,char* buf) {
-  char tbuf[32];
-  char bchars[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+void itoa(unsigned num,unsigned base,char* buf) {
 
-  int pos = 0;
-  int opos = 0;
-  int top = 0;
-
-  if (i == 0 || base > 16) {
+  if (num == 0 || base > 16) {
     buf[0] = '0';
-    buf[1] = '\0';
+    buf[1] = 0;
     return;
   }
 
-  while (i != 0) {
-    tbuf[pos] = bchars[i % base];
+  char temp[32];
+  char bchars[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+  int pos = 0;
+
+  while (num != 0) {
+    temp[pos] = bchars[num % base];
     pos++;
-    i /= base;
+    num /= base;
   }
-  top=pos--;
-  for (opos=0; opos<top; pos--,opos++) {
-    buf[opos] = tbuf[pos];
+
+  if(base == 16){
+    temp[pos++] = 'x';
+    temp[pos++] = '0';
+  }
+
+  int top = pos--;
+  int opos = 0;
+
+  for (opos = 0; opos<top; pos--,opos++) {
+    buf[opos] = temp[pos];
   }
   buf[opos] = 0;
 }
@@ -100,7 +119,10 @@ void itoa(unsigned i,unsigned base,char* buf) {
 void putc(char c) {
 
   // backspace character
-  if (c == 0x08 && cursor_x) cursor_x--;
+  if (c == 0x08 && cursor_x){
+    cursor_x--;
+    text_buf[VGA_crsr_pos()] = VGA_BLANK;
+  }
 
   // tab character
   else if (c == 0x09) cursor_x = (cursor_x+8) & ~(8-1);
@@ -118,7 +140,7 @@ void putc(char c) {
   else if(c >= ' ') {
 
     // display character on screen
-    text_buf[(cursor_y * VGA_X_SIZE) + cursor_x] = c | (attribute << 8);
+    text_buf[VGA_crsr_pos()] = c | (VGA_ATTRIBUTE << 8);
     cursor_x++;
   }
 
@@ -136,17 +158,8 @@ void putc(char c) {
 
 
 void puts(char* str) {
-  for (int i = 0 ; i < strlen(str); i++) putc(str[i]);
-}
-
-
-
-/* Sets the forecolor and backcolor that we will use */
-void settextcolor(unsigned char forecolor, unsigned char backcolor)
-{
-  /* Top 4 bits are the background, bottom 4 bits
-  *  are the foreground color */
-  attribute = (backcolor << 4) | (forecolor & 0x0F);
+  int len = strlen(str);
+  for (int i = 0 ; i < len; i++) putc(str[i]);
 }
 
 /* Sets our text-mode VGA pointer, then clears the screen for us */
@@ -154,11 +167,6 @@ void init_video(void)
 {
   cursor_x = 0;
   cursor_y = 0;
-  attribute = 0xf;
-  nl = '\n' & (0x0f);
-  nl = nl | (attribute << 8);
-  zero = attribute << 8;
-  zero = zero | ' ';
-  text_buf = (unsigned short *)0xB8000;
+  text_buf = (unsigned short *) VGA_BUF_LOC;
   cls();
 }

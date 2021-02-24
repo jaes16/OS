@@ -1,5 +1,6 @@
 #include <mmngr_virtual.h>
 #include <system.h>
+#include <libc/string.h>
 
 void vmmngr_enable_paging (void)
 {
@@ -96,6 +97,8 @@ pd_entry* vmmngr_pdirectory_lookup_entry (pdirectory* pd, virtual_addr addr)
 //! initialize the memory manager
 void vmmngr_initialize (void)
 {
+
+  /*
   // identity map the first 4mb (first page table)
   ptable *pde_1 = (ptable *) pmmngr_alloc_block();
   if(!pde_1) return;
@@ -108,6 +111,22 @@ void vmmngr_initialize (void)
   physical_addr p_addr = 0;
 
   // fill out identity mapped page table
+  for(int i = 0; i < PAGES_PER_TABLE; i++){
+    pt_entry_set_frame(&(pde_1->m_entries[i]), p_addr);
+    pt_entry_add_attribute(&(pde_1->m_entries[i]), attributes);
+    // each page's physical address is increased each time
+    p_addr += PMMNGR_BLOCK_SIZE;
+  }
+  */
+
+  ptable *pde_1 = (ptable *) pmmngr_alloc_block();
+  if(!pde_1) return;
+  memset(pde_1, 0, PAGE_TABLE_SIZE);
+
+  uint32_t attributes = 0;
+  attributes |= I86_PTE_PRESENT | I86_PTE_WRITABLE;
+  physical_addr p_addr = 0;
+
   for(int i = 0; i < PAGES_PER_TABLE; i++){
     pt_entry_set_frame(&(pde_1->m_entries[i]), p_addr);
     pt_entry_add_attribute(&(pde_1->m_entries[i]), attributes);
