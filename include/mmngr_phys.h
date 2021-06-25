@@ -35,4 +35,6 @@ extern void * pmmngr_alloc_blocks(int num_block);
 extern void pmmngr_free_block(void *p);
 extern void pmmngr_free_blocks(void *p, int num_blocks);
 
+extern void pmmngr_pmap_size(void);
+
 #endif

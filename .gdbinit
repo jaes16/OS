@@ -16,8 +16,9 @@ target remote localhost:26000
 
 b *0x10000c
 b _main
-b keyboard_handler
+#b keyboard_handler
 b fault_handler
+#b timer_handler
 c
 
 layout split

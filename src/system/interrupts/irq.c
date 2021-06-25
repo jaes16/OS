@@ -1,6 +1,9 @@
 #include <system.h>
 #include <libc/string.h>
 
+#define IRQ_MASTER  0x20
+#define IRQ_SLAVE   0xA0
+
 // Interrupt requests
 
 /* These are own ISRs that point to our special IRQ handler
@@ -52,8 +55,8 @@ void irq_uninstall_handler(int irq)
 *  47 */
 void irq_remap(void)
 {
-  outportb(0x20, 0x11); // tell the first PIC command port to restart
-  outportb(0xA0, 0x11); // tell the second PIC command port to restart
+  outportb(IRQ_MASTER, 0x11); // tell the first PIC command port to restart
+  outportb(IRQ_SLAVE, 0x11); // tell the second PIC command port to restart
   outportb(0x21, 0x20); // remap first PIC to 0x20=32
   outportb(0xA1, 0x28); // remap second PIC to 0x28=40
   outportb(0x21, 0x04); // setting up cascading
@@ -117,25 +120,27 @@ void irq_handler(struct regs *r)
   *  the slave controller */
   if (r->int_no >= 40)
   {
-    outportb(0xA0, 0x20);
+    outportb(IRQ_SLAVE, 0x20);
   }
 
   /* In either case, we need to send an EOI to the master
   *  interrupt controller too */
-  outportb(0x20, 0x20);
+  outportb(IRQ_MASTER, 0x20);
 }
 
+/*
 void interrupt_done(unsigned int n)
 {
 
-	//! insure its a valid hardware irq
+	// insure its a valid hardware irq
 	if (n > 16)
 		return;
 
-	//! test if we need to send end-of-interrupt to second pic
+	// test if we need to send end-of-interrupt to second pic
 	if (n >= 8)
 		outportb(0xA0, 0x20);
 
-	//! always send end-of-interrupt to primary pic
+	// always send end-of-interrupt to primary pic
 	outportb(0x20, 0x20);
 }
+*/

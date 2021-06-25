@@ -1,5 +1,30 @@
 #include <system.h>
 
+
+// ACCESS BITS
+// access bit: set to 0, cpu will set to 1 when accessed
+#define GDT_ACCESS_AC   0x01
+// read/write: read for code segments, write for data segments
+#define GDT_ACCESS_RW   0x02
+// direction/conforming bit: for data segments, 0 for upwards growth, 1 for downwards growth
+//                           for code segments, 0 for execution only with this privilege level, 1 for execution for any privilege level lower (higher ring level) than this
+#define GDT_ACCESS_DC   0x04
+// executable bit: 0 for data, 1 for code
+#define GDT_ACCESS_EX   0x08
+// descriptor type: 0 for system segments, 1 for code or data segments
+#define GDT_ACCESS_S    0x10
+// privilege bit: ring level: 0 = kernel, 3 = user
+#define GDT_ACCESS_PRV  0x60
+// present bit: 1 for all present segments
+#define GDT_ACCESS_PR   0x80
+
+
+// FLAG BITS
+// size bit: 0 for 16 bit protected mode, 1 for 32 bit protected mode
+#define GDT_FLAG_SIZE   0x4
+// granularity bit: 0 for 1 byte granularity, 1 for 4 kB block granularity
+#define GDT_FLAG_GRAN   0x8
+
 // Defines a GDT entry. prevent compiler optimization by packing
 struct gdt_entry
 {
@@ -7,7 +32,7 @@ struct gdt_entry
   unsigned short base_low;
   unsigned char base_middle;
   unsigned char access;
-  unsigned char granularity;
+  unsigned char limit_high_n_flags;
   unsigned char base_high;
 } __attribute__((packed));
 
@@ -28,7 +53,7 @@ struct gdt_ptr gp;
 extern void gdt_flush();
 
 /* Setup a descriptor in the Global Descriptor Table */
-void gdt_set_gate(int num, unsigned long base, unsigned long limit, unsigned char access, unsigned char gran)
+void gdt_set_gate(int num, unsigned long base, unsigned long limit, unsigned char access, unsigned char flags)
 {
   /* Setup the descriptor base address */
   gdt[num].base_low = (base & 0xFFFF);
@@ -37,18 +62,14 @@ void gdt_set_gate(int num, unsigned long base, unsigned long limit, unsigned cha
 
   /* Setup the descriptor limits */
   gdt[num].limit_low = (limit & 0xFFFF);
-  gdt[num].granularity = ((limit >> 16) & 0x0F);
+  gdt[num].limit_high_n_flags = ((limit >> 16) & 0x0F);
 
   /* Finally, set up the granularity and access flags */
-  gdt[num].granularity |= (gran & 0xF0);
+  gdt[num].limit_high_n_flags |= ((flags << 4) & 0xF0);
   gdt[num].access = access;
 }
 
-/* Should be called by main. This will setup the special GDT
-*  pointer, set up the first 3 entries in our GDT, and then
-*  finally call gdt_flush() in our assembler file in order
-*  to tell the processor where the new GDT is and update the
-*  new segment registers */
+// sets up gdt
 void gdt_install(void)
 {
   /* Setup the GDT pointer and limit */
@@ -58,17 +79,15 @@ void gdt_install(void)
   // gdt has to have one null descriptor.
   gdt_set_gate(0, 0, 0, 0, 0);
 
-  /* The second entry is our Code Segment. The base address
-  *  is 0, the limit is 4GBytes, it uses 4KByte granularity,
-  *  uses 32-bit opcodes, and is a Code Segment descriptor.
-  *  Please check the table above in the tutorial in order
-  *  to see exactly what each value means */
-  gdt_set_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);
+  // code segment entry: access: readable, executable (code segment), not a system segment, and present
+  //                     flags: 32 bit protected mode, 4kB block granularity
+  unsigned char gdt_access = 0 | GDT_ACCESS_RW | GDT_ACCESS_EX | GDT_ACCESS_S | GDT_ACCESS_PR;
+  unsigned char gdt_flags = 0 | GDT_FLAG_SIZE | GDT_FLAG_GRAN;
+  gdt_set_gate(1, 0, 0xFFFFFFFF, gdt_access, gdt_flags);
 
-  /* The third entry is our Data Segment. It's EXACTLY the
-  *  same as our code segment, but the descriptor type in
-  *  this entry's access byte says it's a Data Segment */
-  gdt_set_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);
+  // data segment entry: same as above, but executable bit is =0 in access byte now
+  gdt_access = 0 | GDT_ACCESS_RW | GDT_ACCESS_S | GDT_ACCESS_PR;
+  gdt_set_gate(2, 0, 0xFFFFFFFF, gdt_access, gdt_flags);
 
   /* Flush out the old GDT and install the new changes! */
   gdt_flush();

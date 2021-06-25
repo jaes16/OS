@@ -1,4 +1,5 @@
 #include <system.h>
+#include <libc/stdio.h>
 
 // Interrupt service routines
 
@@ -119,6 +120,38 @@ void isrs_install(void)
 *  corresponds to each and every exception. We get the correct
 *  message by accessing like:
 *  exception_message[interrupt_number] */
+unsigned char except_0[30] = "Division By Zero";
+unsigned char except_1[30] = "Debug";
+unsigned char except_2[30] = "Non Maskable Interrupt";
+unsigned char except_3[30] = "Breakpoint";
+unsigned char except_4[30] = "Into Detected Overflow";
+unsigned char except_5[30] = "Out of Bounds";
+unsigned char except_6[30] = "Invalid Opcode";
+unsigned char except_7[30] = "No Coprocessor";
+unsigned char except_8[30] = "Double Fault";
+unsigned char except_9[30] = "Coprocessor Segment Overrun";
+unsigned char except_10[30] = "Bad TSS";
+unsigned char except_11[30] = "Segment Not Present";
+unsigned char except_12[30] = "Stack Fault";
+unsigned char except_13[30] = "General Protection Fault";
+unsigned char except_14[30] = "Page Fault";
+unsigned char except_15[30] = "Unknown Interrupt";
+unsigned char except_16[30] = "Coprocessor Fault";
+unsigned char except_17[30] = "Alignment Check";
+unsigned char except_18[30] = "Machine Check";
+unsigned char except_19[30] = "Reserved";
+unsigned char except_20[30] = "Reserved";
+unsigned char except_21[30] = "Reserved";
+unsigned char except_22[30] = "Reserved";
+unsigned char except_23[30] = "Reserved";
+unsigned char except_24[30] = "Reserved";
+unsigned char except_25[30] = "Reserved";
+unsigned char except_26[30] = "Reserved";
+unsigned char except_27[30] = "Reserved";
+unsigned char except_28[30] = "Reserved";
+unsigned char except_29[30] = "Reserved";
+unsigned char except_30[30] = "Reserved";
+unsigned char except_31[30] = "Reserved";
 
 /* All of our Exception handling Interrupt Service Routines will
 *  point to this function. This will tell us what exception has
@@ -128,40 +161,6 @@ void isrs_install(void)
 *  happening and messing up kernel data structures */
 void fault_handler(struct regs *r)
 {
-
-  unsigned char except_0[30] = "Division By Zero";
-  unsigned char except_1[30] = "Debug";
-  unsigned char except_2[30] = "Non Maskable Interrupt";
-  unsigned char except_3[30] = "Breakpoint";
-  unsigned char except_4[30] = "Into Detected Overflow";
-  unsigned char except_5[30] = "Out of Bounds";
-  unsigned char except_6[30] = "Invalid Opcode";
-  unsigned char except_7[30] = "No Coprocessor";
-  unsigned char except_8[30] = "Double Fault";
-  unsigned char except_9[30] = "Coprocessor Segment Overrun";
-  unsigned char except_10[30] = "Bad TSS";
-  unsigned char except_11[30] = "Segment Not Present";
-  unsigned char except_12[30] = "Stack Fault";
-  unsigned char except_13[30] = "General Protection Fault";
-  unsigned char except_14[30] = "Page Fault";
-  unsigned char except_15[30] = "Unknown Interrupt";
-  unsigned char except_16[30] = "Coprocessor Fault";
-  unsigned char except_17[30] = "Alignment Check";
-  unsigned char except_18[30] = "Machine Check";
-  unsigned char except_19[30] = "Reserved";
-  unsigned char except_20[30] = "Reserved";
-  unsigned char except_21[30] = "Reserved";
-  unsigned char except_22[30] = "Reserved";
-  unsigned char except_23[30] = "Reserved";
-  unsigned char except_24[30] = "Reserved";
-  unsigned char except_25[30] = "Reserved";
-  unsigned char except_26[30] = "Reserved";
-  unsigned char except_27[30] = "Reserved";
-  unsigned char except_28[30] = "Reserved";
-  unsigned char except_29[30] = "Reserved";
-  unsigned char except_30[30] = "Reserved";
-  unsigned char except_31[30] = "Reserved";
-
   char standard_message[30] = " Exception. System Halted!\n";
 
 
@@ -177,9 +176,6 @@ void fault_handler(struct regs *r)
     except_28, except_29, except_30, except_31
   };
 
-  
-
-
   /* Is this a fault whose number is from 0 to 31? */
   if (r->int_no < 32)
   {
@@ -188,6 +184,12 @@ void fault_handler(struct regs *r)
     *  infinite loop */
     puts((char *) exception_messages[r->int_no]);
     puts(standard_message);
+    printf("Fault breakdown:\n\tgs: %x, fs: %x, es: %x, ds: %x\n", r->gs, r->fs, r->es, r->ds);
+    printf("\tedi: %x, esi: %x, ebp: %x, esp: %x\n", r->edi, r->esi, r->ebp, r->esp);
+    printf("\tebx: %x, edx: %x, ecx: %x, eax: %x\n", r->ebx, r->edx, r->ecx, r->eax);
+    printf("\tint_no: %x, err_code: %x\n", r->int_no, r->err_code);
+    printf("\teip: %x, cs: %x, eflags: %x\n", r->eip, r->cs, r->eflags);
+    printf("\tuseresp: %x, ss: %x", r->useresp, r->ss);
     for (;;);
   }
 }

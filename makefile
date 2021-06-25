@@ -12,8 +12,8 @@ AS = i686-elf-as
 # -O for optimization, -fomit-frame-pointer for omiting frame pointer, -finline-functions for inlining available funcs
 # -nostdinc and -fno-builtin to note we aren't using standard c lib functions, -I to say headers are in ./include
 # -c to tell the compiler to only compile and not link
-C_FLAGS=-m32 -Wall -Wextra -O -g -std=gnu99 -ffreestanding -nostdlib -I$(INCLUDE_DIR)
-LINK_FLAGS=-Wall -Wextra -O -g -ffreestanding -nostdlib -I$(INCLUDE_DIR)
+C_FLAGS=-m32 -Wall -Wextra -O -g3 -std=gnu99 -ffreestanding -nostdlib -I$(INCLUDE_DIR)
+LINK_FLAGS=-Wall -Wextra -O -g3 -ffreestanding -nostdlib -I$(INCLUDE_DIR)
 
 
 all: $(BUILD_DIR)/kernel

@@ -7,14 +7,14 @@
 #include <libc/string.h>
 #include <libc/stdio.h>
 
-#define VGA_BUF_LOC 0xB8000
-#define VGA_SIZE 2000
-#define VGA_Y_SIZE 25
-#define VGA_X_SIZE 80
-#define VGA_ENTRY_SIZE 2 // 2 bytes
+#define VGA_BUF_LOC     0xB8000
+#define VGA_SIZE        2000
+#define VGA_Y_SIZE      25
+#define VGA_X_SIZE      80
+#define VGA_ENTRY_SIZE  2
 
-#define VGA_ATTRIBUTE  0xf
-#define VGA_BLANK ((VGA_ATTRIBUTE << 8) | 0)
+#define VGA_ATTRIBUTE   0xf
+#define VGA_BLANK       ((VGA_ATTRIBUTE << 8) | 0)
 
 unsigned short *text_buf;
 unsigned short temp_buf[VGA_Y_SIZE*VGA_X_SIZE];
@@ -36,15 +36,6 @@ void scroll(void)
 int VGA_crsr_pos(void)
 {
   return (cursor_y * VGA_X_SIZE) + cursor_x;
-}
-
-void VGA_backspace(void) // explicitly for terminal commands
-{
-  if(cursor_x > 1){
-    cursor_x--;
-    text_buf[VGA_crsr_pos()] = VGA_BLANK;
-    move_crsr();
-  }
 }
 
 
@@ -81,6 +72,19 @@ void move_crsr(void)
   outportb(0x3D4, 15);
   outportb(0x3D5, crsr_position);
 }
+
+
+
+void VGA_backspace(void) // explicitly for terminal commands
+{
+  if(cursor_x > 1){
+    cursor_x--;
+    text_buf[VGA_crsr_pos()] = VGA_BLANK;
+    move_crsr();
+  }
+}
+
+
 
 void itoa(unsigned num,unsigned base,char* buf) {
 

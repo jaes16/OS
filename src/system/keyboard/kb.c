@@ -8,11 +8,6 @@
 #include <libc/stdio.h>
 
 
-#define VGA_ATTRIBUTE  0xf
-#define VGA_BLANK ((VGA_ATTRIBUTE << 8) | 0)
-
-short *VGA_text_buf = 0xB8000;
-
 /* KBDUS means US Keyboard Layout. This is a scancode table
 *  used to layout a standard US keyboard. I have left some
 *  comments in to give you an idea of what key is what, even
@@ -40,15 +35,15 @@ unsigned char kbdus[128] =
     0,	/* 69 - Num lock*/
     0,	/* Scroll Lock */
     0,	/* Home key */
-    0x80,	/* Up Arrow */
+    0/*x80*/,	/* Up Arrow */
     0,	/* Page Up */
   '-',
-    0x81,	/* Left Arrow */
+    0/*x81*/,	/* Left Arrow */
     0,
-    0x82,	/* Right Arrow */
+    0/*x82*/,	/* Right Arrow */
   '+',
     0,	/* 79 - End key*/
-    0x83,	/* Down Arrow */
+    0/*x83*/,	/* Down Arrow */
     0,	/* Page Down */
     0,	/* Insert Key */
     0,	/* Delete Key */
@@ -65,6 +60,8 @@ volatile char cur_char;
 /* Handles the keyboard interrupt */
 void keyboard_handler(struct regs *r)
 {
+	(void)(r);
+
   if(kb_receiving_input == 0) return;
 
   if(inportb(0x64) & 1){
@@ -109,7 +106,6 @@ void keyboard_handler(struct regs *r)
       }
     }
   }
-  interrupt_done(0);
 
   kb_receiving_input = 0;
   return;

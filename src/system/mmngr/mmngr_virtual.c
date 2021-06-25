@@ -7,11 +7,12 @@ void vmmngr_enable_paging (void)
   __asm__ __volatile ("mov %cr0, %eax \n\tor $0x80000000, %eax \n\tmov %eax, %cr0");
 }
 
-//! allocates a page in physical memory
+// allocates a page in physical memory
 bool vmmngr_alloc_page (pt_entry *e)
 {
+  // check if there is a free 4096 byte block in physical memory
   void* p = pmmngr_alloc_block();
-	if (!p)	return false;
+	if (!p)	return false; // if not, return false
 
 	// map it to the page
 	pt_entry_set_frame(e, (physical_addr)p);

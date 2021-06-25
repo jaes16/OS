@@ -1,4 +1,5 @@
 #include <system.h>
+#include <libc/stdio.h>
 
 void timer_phase(int hz)
 {
@@ -19,18 +20,12 @@ int timer_ticks = 0;
 *  been smoking something funky */
 void timer_handler(struct regs *r)
 {
+	(void)(r);
+  //printf("h");
   /* Increment our 'tick count' */
   timer_ticks++;
 
-  /* Every 18 clocks (approximately 1 second), we will
-  *  display a message on the screen */
-
-  /*
-  if (timer_ticks % 180 == 0)
-  {
-    puts((unsigned char *) "Ten seconds has passed\n");
-  }
-  */
+  return;
 }
 
 /* This will continuously loop until the given time has
