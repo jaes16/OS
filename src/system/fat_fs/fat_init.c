@@ -27,6 +27,7 @@ uint64_t fat_total_blocks;
 uint64_t fat_data_blocks;
 uint64_t fat_data_loc;
 uint64_t fat_table_blocks;
+uint64_t fat_free_blocks;
 
 // returns a pointer to the string after '/'
 char * basename(char *path)
@@ -110,6 +111,7 @@ void fat_init_disk(void)
 	// current directory
 	memcpy(fat_cur_entry, fat_root_entry, sizeof(fat_dir_entry));
 
+	fat_free_blocks = fat_total_blocks - (fat_table_blocks + 2);
 }
 
 uint32_t fat_init(uint32_t fat_address)
@@ -139,11 +141,18 @@ uint32_t fat_init(uint32_t fat_address)
     // if valid, read in fat
     fat_read_blocks(fat, 1, fat_table_blocks);
 
+		// count free blocks
+		for(uint32_t i = 0; i < fat_total_blocks; i++){
+			if (fat[i] == FAT_TABLE_FREE) fat_free_blocks++;
+		}
+
 		// read in root directory
     char buf[512];
     ATA_read_sectors(buf, fat_data_loc / ATA_SECTOR_SIZE, 1);
     memcpy(fat_root_entry, buf, sizeof(fat_dir_entry));
-		memcpy(fat_cur_entry, buf, sizeof(fat_dir_entry));
+		memset(fat_root_entry->file_name, 0, FAT_MAX_FILE_NAME);
+		fat_root_entry->file_name[0] = '/';
+		memcpy(fat_cur_entry, fat_root_entry, sizeof(fat_dir_entry));
   }
   // if not valid, initialize disk (for testing purposes. Later on we should just halt)
   else fat_init_disk();

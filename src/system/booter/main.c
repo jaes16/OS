@@ -83,11 +83,13 @@ int start_input(void)
 
     if(c == '\b'){
       if(index > 0){
+				VGA_backspace();
         index--;
         buf[index] = 0;
       }
     }
     else if(c == '\n'){
+			putc('\n');
       char temp[80];
       memset(temp, 0, 80);
       int j = 0;
@@ -98,6 +100,7 @@ int start_input(void)
       looper = 0;
     }
     else if((index < 79) && (c != 0)){
+			putc(c);
       buf[index] = c;
       index++;
     }
@@ -133,7 +136,10 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
   keyboard_install();
   init_video();
 
-  printf("Kernel initiated, kernel size: %x, kernel start address: %x, kernel end address: %x.\n\n",
+	printf("////////////////////////////////////////////////////////////////////////////////");
+  printf("////////////////////////////// Kernel  initiated! //////////////////////////////");
+	printf("////////////////////////////////////////////////////////////////////////////////\n");
+	printf("Kernel size: %x \nKernel start address: %x \nKernel end address: %x.\n\n",
               kernel_end_addr - kernel_start, kernel_start, kernel_end_addr);
 
 
@@ -148,7 +154,7 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
   pmap_address = (uint32_t) kernel_end_addr;
   pmap_size = pmmngr_get_block_count() / PMMNGR_BLOCKS_PER_BYTE;
 
-  printf("PMEM Map at: %x, Length: %x\nMemory size is %x KB: Memory map returned by GRUB multiboot info:\n", pmap_address, pmap_size, phys_mem_size);
+  printf("PMEM Map at: %x, Length: %x\n\nMemory size is %x KB: Memory map returned by GRUB multiboot info:\n", pmap_address, pmap_size, phys_mem_size);
   // free those regions that grub said are free
   for(int i = 0; m_region[i].size > 0; i++){
     printf("Region %d: Address: %x, Length: %x, Type: %d.\n",
@@ -168,12 +174,12 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
 
   ATA_init();
 
-  printf("Disk Sector Count: %d or %x\n", (uint32_t) ATA_SECTOR_COUNT(), (uint32_t) ATA_SECTOR_COUNT());
+  printf("\nATA disk sector count: %d\n", (uint32_t) ATA_SECTOR_COUNT());
 
-	//ATA_wipe_disk();
+	ATA_wipe_disk();
 
   fat_address = pmap_address + pmap_size;
-  printf("fat_address: %x\n", fat_address);
+  printf("\nAddress of FAT table: %x\n", fat_address);
   fat_init(fat_address);
 
   //pci_detect_dev_cntlr();
@@ -183,7 +189,13 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
   __asm__ __volatile__ ("sti");
 
 
-
+	printf("\n\n////////////////////////////////////////////////////////////////////////////////"
+	       "////////////////////////////////////////////////////////////////////////////////"
+	       "--------------------------------------------------------------------------------"
+				 "////////////////////////////////////////////////////////////////////////////////"
+				 "////////////////////////////////////////////////////////////////////////////////"
+				 "jaes16-OS-DEV:\nRudimentary operating system developed for educational purposes.\n"
+				 "Type \"help\" to get a list of supported commands.\n\n");
   volatile int main_looper = 1;
   while(main_looper){
     if(start_input() == 0) main_looper = 0;

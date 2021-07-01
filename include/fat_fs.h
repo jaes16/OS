@@ -115,6 +115,7 @@ extern uint64_t fat_total_blocks;
 extern uint64_t fat_data_blocks;
 extern uint64_t fat_data_loc;
 extern uint64_t fat_table_blocks;
+extern uint64_t fat_free_blocks;
 
 /////// fat_init.c ////////
 extern char * basename(char *path);
@@ -126,7 +127,7 @@ extern size_t sizeof_fat(void);
 extern uint32_t fat_ents_per_blck(void);
 
 
-/////// fat_attr.c ////////
+//////// fat_attr.c ////////
 /*  in:
     out:    if dir entry is found, saves it in d_entry
     error:  -ENOENT if no dir entry is found
@@ -138,13 +139,23 @@ extern int fat_check_path(char *path, fat_dir_entry *start, char *file_name);
 extern int fat_getattr(char *path, fat_dir_entry *d_entry);
 extern int fat_access(char *path, uint32_t mask);
 
-/////// fat_mk.c ////////
+//////// fat_mk.c ////////
+extern int fat_add_blocks(fat_dir_entry *d_ent, int num_new_blocks);
 extern int fat_mkdir(char* path, uint32_t mode);
+extern int fat_mknod(char *path, uint32_t mode);
 
-/////// fat_rd.c ////////
+//////// fat_rd.c ////////
 extern int fat_readdir(char* path, void *buf, size_t buf_size, size_t offset);
+extern int fat_read(char *path, void *buf, size_t buf_size, size_t offset);
 
-/////// fat_rm.c ////////
+//////// fat_rm.c ////////
 extern int fat_rmdir(char *path);
+extern int fat_unlink(char *path);
+
+//////// fat_write.c ////////
+extern int fat_write(char *path, void *buf, size_t buf_size, size_t offset);
+
+//////// fat_trunc.c ////////
+extern int fat_truncate(char *path, size_t size);
 
 #endif

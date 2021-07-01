@@ -24,12 +24,13 @@
 
 
 char *command_calls[] = {
-	"echo", "time", "readdisk", "readdisk-hex", "writedisk", "ls", "cd", "mkdir", "rmdir", "shutdown", "help"
+	"echo", "time", "readdisk", "readdisk-hex", "writedisk", "ls", "cd", "mkdir",
+	"rmdir", "mknod", "rm", "less", "hexdump", "shutdown", "help"
 };
 
-int command_lens[] = {4, 4, 8, 12, 9, 2, 2, 5, 5, 8, 4};
+int command_lens[] = {4, 4, 8, 12, 9, 2, 2, 5, 5, 5, 2, 4, 7, 8, 4};
 
-int num_commands = 11;
+int num_commands = 15;
 
 
 void terminal_throw_error(int error)
@@ -85,9 +86,6 @@ void terminal_throw_error(int error)
 		break;
 	}
 }
-
-
-
 
 
 
@@ -155,21 +153,112 @@ void path_remove_dots(char *path){
 		path[path_len-2] = 0;
 		return;
 	}
-
-
 }
 
 
 
-void terminal_echo(char *command){
-	(void)(command);
-	printf("Echo is a figure from Greek mythology.\n");
+void correct_path(char *path){
+	int path_len = strnlen(path, FAT_MAX_PATH_LEN);
+
+	// remove excess '/'s
+	for(int i = 0; i < path_len-1;){
+		if(path[i] == '/' && path[i+1] == '/') {
+			memmove(path+i, path+i+1, path_len-(i+1));
+			path_len--;
+			path[path_len] = 0;
+		}
+		else i++;
+	}
+	if (path_len > 1 && path[path_len-1] == '/') path[path_len-1] = 0;
+
+	path_remove_dots(path);
+	return;
 }
+
+
+
+int get_target(int call_len, char *command, char *path)
+{
+	int len_command = strnlen(command, TERM_MAX_COM_LEN);
+
+	memset(path, 0, FAT_MAX_PATH_LEN);
+
+	if(len_command < (call_len+2) || command[call_len] != ' ' || command[call_len+1] == ' '){
+		// no target
+		return -1;
+	}
+	else{
+		// until next ' '
+		for(int i = call_len+1; i < len_command; i++){
+			if(command[i] == ' ') break;
+			path[i-(call_len+1)] = command[i];
+		}
+	}
+
+	return len_command;
+}
+
+
+
+
+void terminal_echo(char *command)
+{
+	// not supporting flags yet
+	int call_len = 4;
+	int len_command = strnlen(command, TERM_MAX_COM_LEN);
+
+	char path[FAT_MAX_PATH_LEN];
+	memset(path, 0, FAT_MAX_PATH_LEN);
+
+	int i = call_len+1;
+	// get path
+	if(len_command < (call_len+2) || command[call_len] != ' ' || command[call_len+1] == ' '){
+		printf("\n");
+		return;
+	}
+	else{
+		// until next >
+		for(; i < len_command; i++){
+			if(command[i] == '>') break;
+		}
+		for(int j = i+2; j < len_command; j++){
+			path[j-(i+2)] = command[j];
+		}
+	}
+	if (i == len_command) printf("%s\n", (char *) command+call_len+1);
+	else {
+		size_t write_size = i - (call_len+1);
+
+		// gotta write to file
+		char buf[FAT_BLOCK_SIZE];
+		memset(buf, 0, FAT_BLOCK_SIZE);
+		memcpy(buf, command+call_len+1, write_size-1);
+		buf[write_size-1] = '\n';
+
+		correct_path(path);
+
+		// set file size to zero then increase to needed amount
+		int res = fat_truncate(path, 0);
+		if (res < 0){ terminal_throw_error(res); return;}
+		res = fat_truncate(path, write_size);
+		if (res < 0){ terminal_throw_error(res); return;}
+
+		// writeout
+		res = fat_write(path, buf, write_size, 0);
+		if (res < 0) terminal_throw_error(res);
+		// we know command length will not be > FAT_BLOCK_SIZE
+	}
+	return;
+}
+
+
+
 
 void terminal_time(char *command){
 	(void)(command);
 	printf("Time: %d\n", timer_ticks);
 }
+
 
 
 
@@ -282,29 +371,18 @@ void print_permissions(uint32_t perm)
 void terminal_ls(char *command)
 {
 	// not supporting flags yet
-	int call_len = 2;
-	int len_command = strnlen(command, TERM_MAX_COM_LEN);
-
 	char path[FAT_MAX_PATH_LEN];
-	memset(path, 0, FAT_MAX_PATH_LEN);
+	int len_command = get_target(2, command, path);
 
-	if(len_command < (call_len+2) || command[call_len] != ' ' || command[call_len+1] == ' '){
-		// call readdir on current path
-		memcpy(path, fat_cur_path, FAT_MAX_PATH_LEN);
-	}
-	else{
-		// until next ' '
-		for(int i = call_len+1; i < len_command; i++){
-			if(command[i] == ' ') break;
-			path[i-(call_len+1)] = command[i];
-		}
-
-	}
-
+	// if no target, run on current directory
+	if(len_command < 0)	memcpy(path, fat_cur_path, FAT_MAX_PATH_LEN);
 
 	fat_dir_entry buf[fat_ents_per_blck()+1];
 	memset(buf, 0, FAT_BLOCK_SIZE);
 	int offset = 0;
+
+	correct_path(path);
+
 	offset = fat_readdir(path, buf, FAT_BLOCK_SIZE, (size_t) offset);
 	if(offset < 0) terminal_throw_error(offset);
 
@@ -314,7 +392,7 @@ void terminal_ls(char *command)
 		for(uint32_t i = 0; i < fat_ents_per_blck(); i++){
 			if (buf[i].file_name[0] == 0) break;
 			print_permissions(buf[i].file_attribute);
-			printf("\t%d\t%s\n", buf[i].file_size, buf[i].file_name);
+			printf("\t%d\t#%d\t%s\n", buf[i].file_size, buf[i].cluster_num, buf[i].file_name);
 		}
 		// read more
 		memset(buf, 0, FAT_BLOCK_SIZE);
@@ -327,59 +405,63 @@ void terminal_ls(char *command)
 void terminal_cd(char *command)
 {
 	// not supporting flags yet
-	int call_len = 2;
-	int len_command = strnlen(command, TERM_MAX_COM_LEN);
-
 	char path[FAT_MAX_PATH_LEN];
-	memset(path, 0, FAT_MAX_PATH_LEN);
+	int len_command = get_target(2, command, path);
 
-	// get path
-	if(len_command < (call_len+2) || command[call_len] != ' ' || command[call_len+1] == ' '){
-		// call readdir on current path
-		memcpy(path, fat_cur_path, FAT_MAX_PATH_LEN);
-	}
-	else{
-		// until next ' '
-		for(int i = call_len+1; i < len_command; i++){
-			if(command[i] == ' ') break;
-			path[i-(call_len+1)] = command[i];
-		}
-	}
+	// if no target, try to change directory to root
+	if (len_command < 0) path[0] = '/';
+
 	int cur_path_len = strnlen(fat_cur_path, FAT_MAX_PATH_LEN);
-
-	// check path len
-	if (path[0] != '/'){
-		if ((strnlen(path,FAT_MAX_PATH_LEN) + cur_path_len + 1) > FAT_MAX_PATH_LEN) terminal_throw_error(-ENAMETOOLONG);
-	}
-	// see if we can enter this file
-	int res = fat_access(path, FAT_PERM_OWN_EXEC);
-	if (res < 0){
-		terminal_throw_error(res);
-		return;
-	}
 
 	// get file_attributes
 	fat_dir_entry d_entry;
+	int res = fat_getattr(path, &d_entry);
+	if (res < 0){ terminal_throw_error(res); return;}
 
+
+	int block_num = 0;
 	if (path[0] != '/'){
-		fat_cur_ent_block = fat_find_entry(path, &d_entry, fat_cur_entry);
-		memcpy(fat_cur_entry, &d_entry, sizeof(fat_dir_entry));
-		if(fat_cur_path[cur_path_len-1] == '/'){
-			memcpy(fat_cur_path+cur_path_len, path, strnlen(path,FAT_MAX_PATH_LEN));
+		if ((strnlen(path,FAT_MAX_PATH_LEN) + cur_path_len + 1) > FAT_MAX_PATH_LEN){
+			terminal_throw_error(-ENAMETOOLONG);
+			return;
 		}
-		else{
-			fat_cur_path[cur_path_len] = '/';
-			memcpy(fat_cur_path+cur_path_len+1, path, strnlen(path,FAT_MAX_PATH_LEN));
-		}
+
+		correct_path(path);
+
+		// find directory from current directory
+		block_num = fat_find_entry(path, &d_entry, fat_cur_entry);
+
+		// check if directory
+		if ((d_entry.file_attribute & FAT_FILE_ATTR_DIR) == 0) {terminal_throw_error(-ENOTDIR); return;}
+		// check if it can be entered
+		if ((d_entry.file_attribute & FAT_PERM_OWN_EXEC) == 0) {terminal_throw_error(-EACCES); return;}
+
+		// set current path
+		fat_cur_path[cur_path_len] = '/';
+		memcpy(fat_cur_path+cur_path_len+1, path, strnlen(path,FAT_MAX_PATH_LEN));
 	}
 	else{
+
+		correct_path(path);
+
 		// update current entry and current path
-		fat_cur_ent_block = fat_find_entry(path, &d_entry, fat_root_entry);
-		memcpy(fat_cur_entry, &d_entry, sizeof(fat_dir_entry));
+		block_num = fat_find_entry(path, &d_entry, fat_root_entry);
+
+		// check if directory
+		if ((d_entry.file_attribute & FAT_FILE_ATTR_DIR) == 0) {terminal_throw_error(-ENOTDIR); return;}
+		// check if it can be entered
+		if ((d_entry.file_attribute & FAT_PERM_OWN_EXEC) == 0) {terminal_throw_error(-EACCES); return;}
+
+		// set current path
 		memset(fat_cur_path, 0, FAT_MAX_PATH_LEN);
 		memcpy(fat_cur_path, path, strnlen(path,FAT_MAX_PATH_LEN));
 	}
 
+	// update current directory and the block that the dir entry for the current directory is in
+	memcpy(fat_cur_entry, &d_entry, sizeof(fat_dir_entry));
+	fat_cur_ent_block = block_num;
+
+	// remove dots
 	path_remove_dots(fat_cur_path);
 
 	return;
@@ -390,23 +472,13 @@ void terminal_cd(char *command)
 void terminal_mkdir(char *command)
 {
 	// not supporting flags yet
-	int call_len = 5;
-	int len_command = strnlen(command, TERM_MAX_COM_LEN);
-
 	char path[FAT_MAX_PATH_LEN];
-	memset(path, 0, FAT_MAX_PATH_LEN);
+	int len_command = get_target(5, command, path);
 
-	if(len_command < (call_len+2) || command[call_len] != ' ' || command[call_len+1] == ' '){
-		// call readdir on current path
-		memcpy(path, fat_cur_path, FAT_MAX_PATH_LEN);
-	}
-	else{
-		// until next ' '
-		for(int i = call_len+1; i < len_command; i++){
-			if(command[i] == ' ') break;
-			path[i-(call_len+1)] = command[i];
-		}
-	}
+
+	if (len_command < 0) { printf("mkdir requires a target.\n"); return;}
+
+	correct_path(path);
 
 	int res = fat_mkdir(path, FAT_PERM_OWN_READ | FAT_PERM_OWN_WRITE | FAT_PERM_OWN_EXEC |
 	FAT_PERM_GRP_READ | FAT_PERM_GRP_EXEC | FAT_PERM_OTH_READ | FAT_PERM_OTH_EXEC);
@@ -418,26 +490,123 @@ void terminal_mkdir(char *command)
 void terminal_rmdir(char *command)
 {
 	// not supporting flags yet
-	int call_len = 5;
-	int len_command = strnlen(command, TERM_MAX_COM_LEN);
-
 	char path[FAT_MAX_PATH_LEN];
-	memset(path, 0, FAT_MAX_PATH_LEN);
+	int len_command = get_target(5, command, path);
 
-	if(len_command < (call_len+2) || command[call_len] != ' ' || command[call_len+1] == ' '){
-		// call readdir on current path
-		memcpy(path, fat_cur_path, FAT_MAX_PATH_LEN);
-	}
-	else{
-		// until next ' '
-		for(int i = call_len+1; i < len_command; i++){
-			if(command[i] == ' ') break;
-			path[i-(call_len+1)] = command[i];
-		}
-	}
+	if(len_command < 0){	printf("rmdir requires a target.\n"); return;}
+
+	correct_path(path);
 
 	int res = fat_rmdir(path);
 	if(res < 0) terminal_throw_error(res);
+	return;
+}
+
+
+
+void terminal_mknod(char *command)
+{
+	// not supporting flags yet
+	char path[FAT_MAX_PATH_LEN];
+	int len_command = get_target(5, command, path);
+
+	if(len_command < 0){ printf("mknod requires a target.\n"); return;}
+
+	correct_path(path);
+
+	int res = fat_mknod(path, FAT_PERM_OWN_READ | FAT_PERM_OWN_WRITE | FAT_PERM_OWN_EXEC |
+	FAT_PERM_GRP_READ | FAT_PERM_GRP_EXEC | FAT_PERM_OTH_READ | FAT_PERM_OTH_EXEC);
+	if(res < 0) terminal_throw_error(res);
+	return;
+}
+
+
+
+void terminal_rm(char *command)
+{
+
+	char path[FAT_MAX_PATH_LEN];
+	int len_command = get_target(2, command, path);
+
+	if(len_command < 0)	{printf("less requires a target.\n"); return;}
+
+	correct_path(path);
+
+	int res = fat_unlink(path);
+	if(res < 0) terminal_throw_error(res);
+	return;
+
+}
+
+
+
+void terminal_less(char *command)
+{
+	// not supporting flags yet
+	char path[FAT_MAX_PATH_LEN];
+	int len_command = get_target(4, command, path);
+
+	if(len_command < 0){	printf("less requires a target.\n");	return;	}
+
+	char buf[FAT_BLOCK_SIZE];
+	memset(buf, 0, FAT_BLOCK_SIZE);
+	size_t offset = 0;
+
+	correct_path(path);
+
+	//start reading
+	int res = fat_read(path, buf, FAT_BLOCK_SIZE, (size_t) offset);
+	if(res < 0) terminal_throw_error(res);
+
+	// read all directory entries until they stop returning anything
+	while(res > 0){
+		// print
+		printf("%s\n", buf);
+		// read more
+		memset(buf, 0, FAT_BLOCK_SIZE);
+		offset += res;
+		res = fat_read(path, buf, FAT_BLOCK_SIZE, (size_t) offset);
+		if (res < 0) terminal_throw_error(offset);
+	}
+	return;
+}
+
+
+
+void terminal_hexdump(char *command)
+{
+	// not supporting flags yet
+	char path[FAT_MAX_PATH_LEN];
+	int len_command = get_target(7, command, path);
+
+	if(len_command < 0) {	printf("hexdump requires a target.\n");	return;	}
+
+	char buf[FAT_BLOCK_SIZE];
+	memset(buf, 0, FAT_BLOCK_SIZE);
+	size_t offset = 0;
+
+	correct_path(path);
+
+	// start reading
+	int res = fat_read(path, buf, FAT_BLOCK_SIZE, (size_t) offset);
+	if(res < 0) terminal_throw_error(res);
+
+	// read all directory entries until they stop returning anything
+	while(res > 0){
+		// print in hex
+		printf("%x\t", offset);
+		for (int i = 0; i < FAT_BLOCK_SIZE/16; i++){
+			for (int j = 0; j < 16; j++){
+				printf("%x  ", ((int) buf[(16 * i) + j]) & 0xffff);
+			}
+			printf("\n");
+		}
+		// read more
+		memset(buf, 0, FAT_BLOCK_SIZE);
+		offset += res;
+		res = fat_read(path, buf, FAT_BLOCK_SIZE, (size_t) offset);
+		if (res < 0) terminal_throw_error(offset);
+	}
 	return;
 }
 
@@ -464,7 +633,8 @@ void terminal_help(char *command)
 
 void *commands[] = {
 	terminal_echo, terminal_time, terminal_readdisk, terminal_readdisk_hex, terminal_writedisk,
-	terminal_ls, terminal_cd, terminal_mkdir, terminal_rmdir, terminal_shutdown, terminal_help
+	terminal_ls, terminal_cd, terminal_mkdir, terminal_rmdir, terminal_mknod, terminal_rm, terminal_less,
+	terminal_hexdump, terminal_shutdown, terminal_help
 };
 
 

@@ -74,12 +74,19 @@ void ATA_identify(int drive)
   uint16_t buf[256];
   for(int i = 0; i<256; i++) buf[i] = inportw(ATA_DATA_REG);
 
+	uint64_t drive_sectors = 0;
   if((buf[ATA_ID_RET_LBA48] & ATA_ID_RET_LBA48_BIT) != 0){ // LBA48
     ATA_sectors += buf[ATA_ID_RET_LBA48_BLOCK];
+		drive_sectors += buf[ATA_ID_RET_LBA48_BLOCK];
     ATA_sectors += ((uint64_t) buf[ATA_ID_RET_LBA48_BLOCK+1]) << 16;
-    ATA_sectors += ((uint64_t) buf[ATA_ID_RET_LBA48_BLOCK+2]) << 32;
+    drive_sectors += ((uint64_t) buf[ATA_ID_RET_LBA48_BLOCK+1]) << 16;
+		ATA_sectors += ((uint64_t) buf[ATA_ID_RET_LBA48_BLOCK+2]) << 32;
+    drive_sectors += ((uint64_t) buf[ATA_ID_RET_LBA48_BLOCK+2]) << 32;
     ATA_sectors += ((uint64_t) buf[ATA_ID_RET_LBA48_BLOCK+3]) << 48;
+    drive_sectors += ((uint64_t) buf[ATA_ID_RET_LBA48_BLOCK+3]) << 48;
   }
+
+	printf("ATA_identify: Found drive%d with %d sectors\n", drive, (uint32_t) drive_sectors);
 
 }
 
