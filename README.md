@@ -15,23 +15,7 @@
 	To run with a connection to the gdb debugger, run with 'qemu-system-i386 -kernel ./build/kernel -hda ./build/disk1.img  -gdb tcp::26000 -S', or run './qemu-gdb.sh'.
 
 	**Supported OS terminal commands:**
-	```
-	echo
-	time
-	readdisk
-	readdisk-hex
-	writedisk
-	ls
-	cd
-	mkdir
-	rmdir
-	mknod
-	rm
-	less
-	hexdump
-	shutdown
-	help
-	```
+	
 
  	**Needs more work:**
 
