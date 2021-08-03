@@ -6,10 +6,10 @@ Runs on x86, for now with a qemu virtual machine. The purpose of this project is
 ## Requirements for running:
 - qemu-system-i386
 - i686-elf-gcc
-- i386-elf-gdb
+- i386-elf-gdb (suggested)
 - GRUB
 
-If on Mac or Linux, these can easily be installed with homebrew.
+If on Mac or Linux, these can easily be installed with homebrew. Cross-compiling is necessary.
 
 ## Running the OS:
 
