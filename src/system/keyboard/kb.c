@@ -116,12 +116,40 @@ void keyboard_handler(struct regs *r)
 
   if(kb_receiving_input == 0) return;
 
+	// if we have an input to read
   if(inportb(0x64) & 1){
     unsigned char scancode;
 
-    /* Read from the keyboard's data buffer */
+    // read keyboard input
     scancode = inportb(0x60);
-    if (scancode & 0x80){ // released a key
+    if ((scancode & 0x80) == 0){ // pressed a key
+			if (scancode == KB_CONTROL) ctrl_press = 1;
+			else if (scancode == KB_LEFT_SHIFT) shift_l_press = 1;
+			else if (scancode == KB_RIGHT_SHIFT) shift_r_press = 1;
+			else if (scancode == KB_ALT) alt_press = 1;
+			else{
+				switch(kbdus[scancode]){
+					case('\b'):{
+	          //VGA_backspace();
+	          cur_char = '\b';
+	          break;
+	        }
+	        case('\n'):{
+	          //putc('\n');
+	          cur_char = '\n';
+	          break;
+	        }
+					default:{
+	          if((VGA_crsr_pos() % 80) < 79){
+							if (shift_l_press == 1 || shift_r_press == 1) cur_char = kbdus_shift[scancode];
+							else cur_char = kbdus[scancode];
+						}
+	          break;
+	        }
+				}
+			}
+    }
+		else { // released key
 			switch(scancode){
 				case (KB_CONTROL_REL):{
 					ctrl_press = 0;
@@ -139,44 +167,7 @@ void keyboard_handler(struct regs *r)
 					alt_press = 0;
 					break;
 				}
-        case('\b'):{
-          //VGA_backspace();
-          cur_char = '\b';
-          break;
-        }
-        case('\n'):{
-          //putc('\n');
-          cur_char = '\n';
-          break;
-        }
       }
-    }
-		else { // pressed key
-			switch(kbdus[scancode]){
-				case (KB_CONTROL):{
-					ctrl_press = 1;
-					break;
-				}
-				case (KB_LEFT_SHIFT):{
-					shift_l_press = 1;
-					break;
-				}
-				case (KB_RIGHT_SHIFT):{
-					shift_r_press = 1;
-					break;
-				}
-				case (KB_ALT):{
-					alt_press = 1;
-					break;
-				}
-				default:{
-          if((VGA_crsr_pos() % 80) < 79){
-						if (shift_l_press == 1 || shift_r_press == 1) cur_char = kbdus_shift[scancode];
-						else cur_char = kbdus[scancode];
-					}
-          break;
-        }
-			}
 		}
   }
 

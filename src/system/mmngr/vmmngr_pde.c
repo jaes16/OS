@@ -31,14 +31,14 @@ inline int pd_entry_is_present(pd_entry pde)
   return pde & I86_PDE_PRESENT;
 }
 
-//! test if directory is user mode
+// test if directory is user mode
 inline bool pd_entry_is_user (pd_entry pde)
 {
   // return 2rd bit
   return pde & I86_PDE_USER;
 }
 
-//! test if directory contains 4mb pages
+// test if directory contains 4mb pages
 inline bool pd_entry_is_4mb (pd_entry pde)
 {
   // return 7th bit

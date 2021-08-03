@@ -19,6 +19,7 @@
 #include <pci.h>
 #include <fat_fs.h>
 
+#define TERM_MAX_COM_LEN 80
 
 extern int terminal_command(char *command);
 

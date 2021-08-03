@@ -1,24 +1,20 @@
-#define hook-stop
-  # Translate the segment:offset into a physical address
-#  printf "[%4x:%4x] ", $cs, $eip
-#  x/i $cs*16+$eip
-#end
-
+# source file:
 file build/kernel
 
 # Intel syntax
 set disassembly-flavor intel
-
 set architecture i386:intel
 
 # connect to qemu port
 target remote localhost:26000
 
+# break at point where grub loads us in
 b *0x10000c
+# break at main
 b _main
-#b keyboard_handler
+# we should probably find out why we faulted
 b fault_handler
-#b timer_handler
+
 c
 
 layout split

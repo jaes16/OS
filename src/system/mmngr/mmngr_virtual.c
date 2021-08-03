@@ -51,20 +51,20 @@ void vmmngr_flush_tlb_entry (virtual_addr addr)
   __asm__ __volatile__ ("push %%eax \n\tcli \n\tmov %1, %%eax \n\tinvlpg (%%eax) \n\tsti \n\tpop %%eax": "=r" (placeholder) : "r" (addr));
 }
 
-//! clears a page table
+// clears a page table
 void vmmngr_ptable_clear (ptable* pt)
 {
   if(!pt) return;
   memset(pt, 0, PAGE_TABLE_SIZE);
 }
 
-//! convert virtual address to page table index
+// convert virtual address to page table index
 uint32_t vmmngr_virt_to_ptable_index (virtual_addr addr)
 {
   return ((addr >> 12) & 0x3ff);
 }
 
-//! get page entry from page table
+// get page entry from page table
 pt_entry* vmmngr_ptable_lookup_entry (ptable* pt,virtual_addr addr)
 {
   if(!pt) return 0;
@@ -72,13 +72,13 @@ pt_entry* vmmngr_ptable_lookup_entry (ptable* pt,virtual_addr addr)
   return &(pt->m_entries[vmmngr_virt_to_ptable_index(addr)]);
 }
 
-//! convert virtual address to page directory index
+// convert virtual address to page directory index
 uint32_t vmmngr_virt_to_pdirectory_index (virtual_addr addr)
 {
   return (addr >> 22);
 }
 
-//! clears a page directory table
+// clears a page directory table
 void vmmngr_pdirectory_clear (pdirectory* dir)
 {
   if(!dir) return;
@@ -86,7 +86,7 @@ void vmmngr_pdirectory_clear (pdirectory* dir)
   memset(dir, 0, PAGE_DIRECTORY_SIZE);
 }
 
-//! get directory entry from directory table
+// get directory entry from directory table
 pd_entry* vmmngr_pdirectory_lookup_entry (pdirectory* pd, virtual_addr addr)
 {
   if(!pd) return 0;

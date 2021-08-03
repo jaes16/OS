@@ -20,7 +20,7 @@ unsigned short *text_buf;
 unsigned short temp_buf[VGA_Y_SIZE*VGA_X_SIZE];
 unsigned char cursor_x = 0, cursor_y = 0;
 
-/* Scrolls the screen one line*/
+// scroll one line down
 void scroll(void)
 {
   // copy last 24 lines up
@@ -119,7 +119,7 @@ void itoa(unsigned num,unsigned base,char* buf) {
 }
 
 
-// Displays a character
+// displays a character
 void putc(char c) {
 
   // backspace character
@@ -166,7 +166,7 @@ void puts(char* str) {
   for (int i = 0 ; i < len; i++) putc(str[i]);
 }
 
-/* Sets our text-mode VGA pointer, then clears the screen for us */
+// set up vga buf
 void init_video(void)
 {
   cursor_x = 0;

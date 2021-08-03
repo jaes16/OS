@@ -65,23 +65,26 @@ void outportd (unsigned short _port, unsigned int _data)
 
 
 
-
+// get input till \n
 int start_input(void)
 {
-  char buf[80];
+	// buffer for current line in terminal
+  char buf[TERM_MAX_COM_LEN];
 
-  memset(buf, 0, 80);
+  memset(buf, 0, TERM_MAX_COM_LEN);
   int index = 0;
 
   int ret_val = 1;
 
   printf("\nroot %s >", fat_cur_path);
+
   int looper = 1;
   while(looper == 1){
 
     char c = getChar();
 
     if(c == '\b'){
+			// backspace unless at beginning
       if(index > 0){
 				VGA_backspace();
         index--;
@@ -90,16 +93,21 @@ int start_input(void)
     }
     else if(c == '\n'){
 			putc('\n');
-      char temp[80];
-      memset(temp, 0, 80);
+      char temp[TERM_MAX_COM_LEN];
+      memset(temp, 0, TERM_MAX_COM_LEN);
+
+			// get command
       int j = 0;
-      for(int i = 0; i < 80; i++){
+      for(int i = 0; i < TERM_MAX_COM_LEN; i++){
         if (buf[i] != 0) temp[j++] = buf[i];
       }
+			// run command
       if(terminal_command(temp) == 0) ret_val = 0;
+
+			// done for this round of input
       looper = 0;
     }
-    else if((index < 79) && (c != 0)){
+    else if((index < TERM_MAX_COM_LEN-1) && (c != 0)){
 			putc(c);
       buf[index] = c;
       index++;
@@ -119,8 +127,6 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
 {
   // if magic number for multiboot is incorrect, halt. something don goofed
   if(magic != 0x2BADB002){
-    // init_video();
-    // puts("Incorrect magic number.");
     __asm__ __volatile__ ("hlt");
     for(;;);
   }
@@ -136,6 +142,7 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
   keyboard_install();
   init_video();
 
+
 	printf("////////////////////////////////////////////////////////////////////////////////");
   printf("////////////////////////////// Kernel  initiated! //////////////////////////////");
 	printf("////////////////////////////////////////////////////////////////////////////////\n");
@@ -143,7 +150,6 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
               kernel_end_addr - kernel_start, kernel_start, kernel_end_addr);
 
 
-  // then start interrupts so those installs above have an effect
 
   // start reading multiboot info to get memory size and locations
   struct multiboot_mmap_entry *m_region = (struct multiboot_mmap_entry *) mbd->mmap_addr;
@@ -155,10 +161,13 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
   pmap_size = pmmngr_get_block_count() / PMMNGR_BLOCKS_PER_BYTE;
 
   printf("PMEM Map at: %x, Length: %x\n\nMemory size is %x KB: Memory map returned by GRUB multiboot info:\n", pmap_address, pmap_size, phys_mem_size);
+
   // free those regions that grub said are free
   for(int i = 0; m_region[i].size > 0; i++){
-    printf("Region %d: Address: %x, Length: %x, Type: %d.\n",
-                i, (uint32_t) m_region[i].addr, (uint32_t) m_region[i].len, m_region[i].type);
+    printf("Region %d: Address: %x, Length: %x, Type: %d.\n", i,
+						(uint32_t) m_region[i].addr,
+						(uint32_t) m_region[i].len,
+						m_region[i].type);
     if(m_region[i].type == 1){
       pmmngr_init_region(m_region[i].addr, m_region[i].len);
     }
@@ -170,22 +179,22 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
   pmmngr_deinit_region(kernel_end_addr, (phys_mem_size/PMMNGR_BLOCK_SIZE)/PMMNGR_BLOCKS_PER_BYTE); // space for physical memory manager
 
 
+	// initiate virtual memory manager
   vmmngr_initialize();
 
+	// initiate ATA handler
   ATA_init();
 
   printf("\nATA disk sector count: %d\n", (uint32_t) ATA_SECTOR_COUNT());
 
-	ATA_wipe_disk();
 
+	// initiate fat file system
   fat_address = pmap_address + pmap_size;
   printf("\nAddress of FAT table: %x\n", fat_address);
   fat_init(fat_address);
 
-  //pci_detect_dev_cntlr();
 
-
-
+	// start interrupts
   __asm__ __volatile__ ("sti");
 
 
@@ -196,12 +205,16 @@ void _main(multiboot_info_t* mbd, unsigned long kernel_end_addr, unsigned long k
 				 "////////////////////////////////////////////////////////////////////////////////"
 				 "jaes16-OS-DEV:\nRudimentary operating system developed for educational purposes.\n"
 				 "Type \"help\" to get a list of supported commands.\n\n");
-  volatile int main_looper = 1;
+
+	// start terminal
+	volatile int main_looper = 1;
   while(main_looper){
+		// no rest for the wicked
     if(start_input() == 0) main_looper = 0;
-    //printf("timer: %d\n", timer_ticks);
   }
 
+
+	// halting...
   __asm__ __volatile__ ("cli");
 
   for (;;);

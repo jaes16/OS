@@ -25,7 +25,7 @@
 // granularity bit: 0 for 1 byte granularity, 1 for 4 kB block granularity
 #define GDT_FLAG_GRAN   0x8
 
-// Defines a GDT entry. prevent compiler optimization by packing
+// prevent compiler optimization by packing
 struct gdt_entry
 {
   unsigned short limit_low;
@@ -36,35 +36,32 @@ struct gdt_entry
   unsigned char base_high;
 } __attribute__((packed));
 
-/* Special pointer which includes the limit: The max bytes
-*  taken up by the GDT, minus 1. Again, this NEEDS to be packed */
+// gdtable pointer
 struct gdt_ptr
 {
   unsigned short limit;
   unsigned int base;
 } __attribute__((packed));
 
-/* Our GDT, with 3 entries, and finally our special GDT pointer */
+// entries for empty, code, data
 struct gdt_entry gdt[3];
 struct gdt_ptr gp;
 
-/* This will be a function in start.asm. We use this to properly
-*  reload the new segment registers */
+// calls load gdt in gdt.s
 extern void gdt_flush();
 
-/* Setup a descriptor in the Global Descriptor Table */
 void gdt_set_gate(int num, unsigned long base, unsigned long limit, unsigned char access, unsigned char flags)
 {
-  /* Setup the descriptor base address */
+	// gdt region address
   gdt[num].base_low = (base & 0xFFFF);
   gdt[num].base_middle = (base >> 16) & 0xFF;
   gdt[num].base_high = (base >> 24) & 0xFF;
 
-  /* Setup the descriptor limits */
+	// gdt region limit
   gdt[num].limit_low = (limit & 0xFFFF);
   gdt[num].limit_high_n_flags = ((limit >> 16) & 0x0F);
 
-  /* Finally, set up the granularity and access flags */
+	// gdt region flags
   gdt[num].limit_high_n_flags |= ((flags << 4) & 0xF0);
   gdt[num].access = access;
 }
@@ -72,7 +69,7 @@ void gdt_set_gate(int num, unsigned long base, unsigned long limit, unsigned cha
 // sets up gdt
 void gdt_install(void)
 {
-  /* Setup the GDT pointer and limit */
+	// set up pointer to gdt
   gp.limit = (sizeof(struct gdt_entry) * 3) - 1;
   gp.base = (unsigned int) &gdt;
 
@@ -89,6 +86,5 @@ void gdt_install(void)
   gdt_access = 0 | GDT_ACCESS_RW | GDT_ACCESS_S | GDT_ACCESS_PR;
   gdt_set_gate(2, 0, 0xFFFFFFFF, gdt_access, gdt_flags);
 
-  /* Flush out the old GDT and install the new changes! */
   gdt_flush();
 }

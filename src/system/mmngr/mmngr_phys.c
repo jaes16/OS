@@ -6,16 +6,16 @@
 
 
 
-//! size of physical memory
+// size of physical memory
 static	uint32_t	_mmngr_memory_size=0;
 
-//! number of blocks currently in use
+// number of blocks currently in use
 static	uint32_t	_mmngr_used_blocks=0;
 
-//! maximum number of available memory blocks
+// maximum number of available memory blocks
 static	uint32_t	_mmngr_max_blocks=0;
 
-//! memory map bit array. Each bit represents a memory block
+// memory map bit array. Each bit represents a memory block
 static	uint32_t*	_mmngr_memory_map= 0;
 
 

@@ -13,17 +13,12 @@ uint64_t ATA_sectors = 0;
 
 uint64_t ATA_SECTOR_COUNT(void) { return ATA_sectors; }
 
+// masks for reading lba
 static uint8_t LBA_LOW(uint32_t LBA) { return LBA & 0xff; }
 static uint8_t LBA_MID(uint32_t LBA) { return (LBA & 0xff00) >> 8; }
 static uint8_t LBA_HIGH(uint32_t LBA) { return (LBA & 0xff0000) >> 16; }
 static uint8_t LBA_DRV_HD(uint32_t LBA) { return (0xe0 | ((LBA >> 24) & 0xf) ); }
 
-/*
-static void ATA_wait_RDY(void)
-{
-  while(!(inportb(ATA_STAT_CMD_REG) & ATA_STATUS_RDY));
-}
-*/
 static void ATA_wait_not_BSY(void)
 { // wait until drive is not busy
 	while(inportb(ATA_STAT_CMD_REG) & ATA_STATUS_BSY);
@@ -33,7 +28,7 @@ static void ATA_wait_DRQ(void)
 	while(!(inportb(ATA_STAT_CMD_REG) & ATA_STATUS_DRQ));
 }
 static void ATA_wait_ERR(void)
-{ // wait until drive is ready to accept PIO data
+{ // wait until drive has no error status
 	while(inportb(ATA_STAT_CMD_REG) & ATA_STATUS_ERR);
 }
 
@@ -43,6 +38,7 @@ void ATA_identify(int drive)
   if(drive == 0) outportb(ATA_DRV_HD_REG, ATA_DRIVE_MASTER); // master drive
   else outportb(ATA_DRV_HD_REG, ATA_DRIVE_SLAVE); // slave drive
 
+	// flush out lba and sector
   outportb(ATA_SCTR_COUNT_REG, 0);
   outportb(ATA_LBA_LOW_REG, 0);
 	outportb(ATA_LBA_MID_REG, 0);
@@ -71,11 +67,11 @@ void ATA_identify(int drive)
   ATA_wait_DRQ();
   ATA_wait_ERR();
 
-  uint16_t buf[256];
-  for(int i = 0; i<256; i++) buf[i] = inportw(ATA_DATA_REG);
+  uint16_t buf[ATA_SECTOR_SIZE/sizeof(uint16_t)];
+  for(uint32_t i = 0; i<ATA_SECTOR_SIZE/sizeof(uint16_t); i++) buf[i] = inportw(ATA_DATA_REG);
 
 	uint64_t drive_sectors = 0;
-  if((buf[ATA_ID_RET_LBA48] & ATA_ID_RET_LBA48_BIT) != 0){ // LBA48
+  if((buf[ATA_ID_RET_LBA48] & ATA_ID_RET_LBA48_BIT) != 0){ // if we are LBA48, get disk size
     ATA_sectors += buf[ATA_ID_RET_LBA48_BLOCK];
 		drive_sectors += buf[ATA_ID_RET_LBA48_BLOCK];
     ATA_sectors += ((uint64_t) buf[ATA_ID_RET_LBA48_BLOCK+1]) << 16;
@@ -110,6 +106,7 @@ void ATA_read_sector(void *target_address, uint32_t LBA)
 	ATA_wait_not_BSY();
   ATA_wait_DRQ();
   ATA_wait_ERR();
+
 
 	for(uint32_t i = 0; i < ATA_SECTOR_SIZE/sizeof(uint32_t); i++){
 		target[i] = inportd(ATA_DATA_REG);
@@ -195,6 +192,7 @@ void ATA_wipe_disk(void)
 
 void ATA_init(void)
 {
+	// really we should identify all possible disks, but for now...
   ATA_identify(0);
   ATA_identify(1);
 }

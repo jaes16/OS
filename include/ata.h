@@ -31,7 +31,7 @@
 #define ATA_ERR_UNC   0x40
 #define ATA_ERR_BBK   0x80
 
-// Status codes
+// status codes
 #define ATA_STATUS_ERR  0x01  // indicated an error occured
 #define ATA_STATUS_IDX  0x02  // always set to 0
 #define ATA_STATUS_CORR 0x04  // always set to 0

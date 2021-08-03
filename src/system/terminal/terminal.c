@@ -19,7 +19,7 @@
 
 
 
-#define TERM_MAX_COM_LEN 80
+
 
 
 
@@ -462,7 +462,7 @@ void terminal_cd(char *command)
 	fat_cur_ent_block = block_num;
 
 	// remove dots
-	path_remove_dots(fat_cur_path);
+	correct_path(fat_cur_path);
 
 	return;
 

@@ -2,7 +2,7 @@ INCLUDE_DIR=include
 SOURCE_DIR=src
 BUILD_DIR=build
 
-
+# starts off a chain reaction of mk.sh's that list all the files in src
 BUILD_LIST=$(shell ./src/mk.sh $(PWD)/src src)
 
 CC = i686-elf-gcc
