@@ -4,12 +4,12 @@
 Runs on x86, for now with a qemu virtual machine. The purpose of this project is mainly educational, to teach myself OS development, as well as being an interesting side hobby. The project is still very rough around the edges, but provides very rudimentary memory management, a FATFS-style file system, and a terminal to interact with.
 
 ## Requirements for running:
-- qemu-system-i386
-- i686-elf-gcc
-- i386-elf-gdb (suggested)
-- GRUB
+- [qemu-system-i386](https://www.qemu.org/)
+- [i386-elf-gcc](https://github.com/nativeos/homebrew-i386-elf-toolchain)
+- [i386-elf-gdb](https://formulae.brew.sh/formula/i386-elf-gdb#default) (suggested)
+- [GRUB](https://www.gnu.org/software/grub/)
 
-If on Mac or Linux, these can easily be installed with homebrew. Cross-compiling is necessary.
+If on Mac or Linux, these can easily be installed with homebrew. [Cross-compiling is necessary.](https://wiki.osdev.org/GCC_Cross-Compiler)
 
 ## Running the OS:
 
