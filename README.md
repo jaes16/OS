@@ -9,7 +9,7 @@ Runs on x86, for now with a qemu virtual machine. The purpose of this project is
 - [i386-elf-gdb](https://formulae.brew.sh/formula/i386-elf-gdb#default) (suggested)
 - [GRUB](https://www.gnu.org/software/grub/)
 
-If on Mac or Linux, these can easily be installed with homebrew. [Cross-compiling is necessary.](https://wiki.osdev.org/GCC_Cross-Compiler)
+If on Mac these can easily be installed with homebrew. [Cross-compiling is necessary.](https://wiki.osdev.org/GCC_Cross-Compiler)
 
 ## Running the OS:
 
